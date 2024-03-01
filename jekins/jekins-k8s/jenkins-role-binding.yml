@@ -1,0 +1,13 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: jenkins-role-binding
+  namespace: devops  # 指定 Namespace 为 devops
+subjects:
+- kind: ServiceAccount
+  name: jenkins-sa
+  namespace: devops  # 指定 Namespace 为 devops
+roleRef:
+  kind: Role
+  name: jenkins-role
+  apiGroup: rbac.authorization.k8s.io

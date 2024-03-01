@@ -1,0 +1,16 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: jenkins-ingress
+  namespace: devops  # 指定 Namespace 为 devops
+spec:
+  rules:
+    - host: jenkins.example.com  # 修改为您的域名
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                serviceName: jenkins
+                servicePort: 8080

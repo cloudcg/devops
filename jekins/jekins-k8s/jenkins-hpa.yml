@@ -1,0 +1,17 @@
+apiVersion: autoscaling/v2beta2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: jenkins-hpa
+  namespace: devops  # 指定 Namespace 为 devops
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: jenkins
+  minReplicas: 1
+  maxReplicas: 5  # 根据需求调整
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        targetAverageUtilization: 50  # 根据需求调整

@@ -1,0 +1,9 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: jenkins-role
+  namespace: devops  # 指定 Namespace 为 devops
+rules:
+- apiGroups: [""]
+  resources: ["pods", "services", "persistentvolumeclaims"]
+  verbs: ["*"]

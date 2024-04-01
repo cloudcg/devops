@@ -1,0 +1,27 @@
+---
+# Source: redis/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-default
+  labels:
+    app.kubernetes.io/name: redis
+    app.kubernetes.io/instance: redis-default
+    app.kubernetes.io/version: "6.2.6"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: redis
+    app.kubernetes.io/instance: redis-default
+spec:
+  type: ClusterIP
+  clusterIP: None
+  ports:
+  - name: server
+    port: 6379
+    targetPort: redis
+  - name: http-metrics
+    port: 9121
+    protocol: TCP
+    targetPort: exporter
+  selector:
+    app.kubernetes.io/name: redis
+    app.kubernetes.io/instance: redis-default

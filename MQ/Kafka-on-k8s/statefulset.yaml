@@ -1,0 +1,279 @@
+---
+# Source: kafka/templates/statefulset.yaml
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: kafka-default
+  labels:
+    app.kubernetes.io/version: "2.12-2.2.2"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: kafka
+    app.kubernetes.io/component: kafka-default
+spec:
+  replicas: 3
+  serviceName: kafka-default
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: kafka-default
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: kafka-default
+    spec:
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      nodeSelector:
+        viper.sensetime.com/node-components: "True"
+      
+      imagePullSecrets:
+        - name: inner
+      securityContext:
+        fsGroup: 1000
+        runAsUser: 1000
+      containers:
+        - name: kafka
+          image: "{ip}:5000/infra/kafka-2.12-2.2.2:975c28c-amd64"
+          imagePullPolicy: "IfNotPresent"
+          resources:
+            limits:
+              cpu: "6"
+              memory: 10Gi
+            requests:
+              cpu: "2"
+              memory: 8Gi
+          ports:
+            - name: server
+              containerPort: 9092
+            - name: server-ssl
+              containerPort: 9093
+            - name: http-metrics
+              containerPort: 7071
+          command:
+            - sh
+            - -c
+            - "export KAFKA_OPTS=\"$KAFKA_OPTS -javaagent:/jmx_prometheus_javaagent-0.14.0.jar=7071:/opt/kafka/config/jmx-kafka-2_0_0.yml\"; \
+               /run.sh /opt/kafka/config/server.properties --override broker.id=${POD_NAME##*-} \
+              --override listeners=SASL_PLAINTEXT://0.0.0.0:9092,SASL_SSL://0.0.0.0:9093 \
+              --override advertised.listeners=SASL_PLAINTEXT://${POD_IP}:9092,SASL_SSL://${NODE_IP}:9093 \
+              --override security.inter.broker.protocol=SASL_PLAINTEXT \
+              --override sasl.enabled.mechanisms=PLAIN \
+              --override sasl.mechanism.inter.broker.protocol=PLAIN \
+              --override authorizer.class.name=kafka.security.auth.SimpleAclAuthorizer \
+              --override allow.everyone.if.no.acl.found=true \
+              --override zookeeper.connect=zookeeper-default-0.component.svc.cluster.local:2181,zookeeper-default-1.component.svc.cluster.local:2181,zookeeper-default-2.component.svc.cluster.local:2181/kafka \
+              --override log.dirs=/var/lib/kafka0/disk00,/var/lib/kafka1/disk00 \
+              --override auto.create.topics.enable=true \
+              --override auto.leader.rebalance.enable=true \
+              --override background.threads=10 \
+              --override compression.type=producer \
+              --override delete.topic.enable=true \
+              --override leader.imbalance.check.interval.seconds=300 \
+              --override leader.imbalance.per.broker.percentage=10 \
+              --override log.flush.interval.messages=9223372036854775807 \
+              --override log.flush.offset.checkpoint.interval.ms=60000 \
+              --override log.flush.scheduler.interval.ms=9223372036854775807 \
+              --override log.retention.bytes=10737418240 \
+              --override log.retention.hours=168 \
+              --override log.roll.hours=168 \
+              --override log.roll.jitter.hours=0 \
+              --override log.segment.bytes=536870912 \
+              --override log.segment.delete.delay.ms=60000 \
+              --override message.max.bytes=10485760 \
+              --override min.insync.replicas=1 \
+              --override num.io.threads=8 \
+              --override num.network.threads=50 \
+              --override num.recovery.threads.per.data.dir=1 \
+              --override num.replica.fetchers=30 \
+              --override offset.metadata.max.bytes=4096 \
+              --override offsets.commit.required.acks=-1 \
+              --override offsets.commit.timeout.ms=5000 \
+              --override offsets.load.buffer.size=5242880 \
+              --override offsets.retention.check.interval.ms=60000 \
+              --override offsets.retention.minutes=10080 \
+              --override offsets.topic.compression.codec=0 \
+              --override offsets.topic.num.partitions=50 \
+              --override offsets.topic.replication.factor=2 \
+              --override offsets.topic.segment.bytes=104857600 \
+              --override queued.max.requests=500 \
+              --override quota.consumer.default=9223372036854775807 \
+              --override quota.producer.default=9223372036854775807 \
+              --override replica.fetch.min.bytes=1 \
+              --override replica.fetch.wait.max.ms=500 \
+              --override replica.high.watermark.checkpoint.interval.ms=5000 \
+              --override replica.lag.time.max.ms=30000 \
+              --override replica.socket.receive.buffer.bytes=65536 \
+              --override replica.socket.timeout.ms=30000 \
+              --override request.timeout.ms=30000 \
+              --override socket.receive.buffer.bytes=102400 \
+              --override socket.request.max.bytes=104857600 \
+              --override socket.send.buffer.bytes=102400 \
+              --override unclean.leader.election.enable=true \
+              --override zookeeper.session.timeout.ms=6000 \
+              --override zookeeper.set.acl=false \
+              --override broker.id.generation.enable=true \
+              --override connections.max.idle.ms=600000 \
+              --override controlled.shutdown.enable=true \
+              --override controlled.shutdown.max.retries=3 \
+              --override controlled.shutdown.retry.backoff.ms=5000 \
+              --override controller.socket.timeout.ms=30000 \
+              --override default.replication.factor=2 \
+              --override fetch.purgatory.purge.interval.requests=1000 \
+              --override group.max.session.timeout.ms=300000 \
+              --override group.min.session.timeout.ms=6000 \
+              --override inter.broker.protocol.version=1.1.1 \
+              --override log.message.format.version=1.1.1 \
+              --override log.cleaner.backoff.ms=15000 \
+              --override log.cleaner.dedupe.buffer.size=134217728 \
+              --override log.cleaner.delete.retention.ms=3600000 \
+              --override log.cleaner.enable=true \
+              --override log.cleaner.io.buffer.load.factor=0.9 \
+              --override log.cleaner.io.buffer.size=524288 \
+              --override log.cleaner.io.max.bytes.per.second=1.7976931348623157E308 \
+              --override log.cleaner.min.cleanable.ratio=0.5 \
+              --override log.cleaner.min.compaction.lag.ms=0 \
+              --override log.cleaner.threads=1 \
+              --override log.cleanup.policy=delete \
+              --override log.index.interval.bytes=4096 \
+              --override log.index.size.max.bytes=10485760 \
+              --override log.message.timestamp.difference.max.ms=9223372036854775807 \
+              --override log.message.timestamp.type=CreateTime \
+              --override log.preallocate=false \
+              --override log.retention.check.interval.ms=300000 \
+              --override max.connections.per.ip=2147483647 \
+              --override num.partitions=32 \
+              --override ssl.keystore.location=/ca/keystore/server.keystore.jks \
+              --override ssl.keystore.password=${KEYSTORE_PASSWORD} \
+              --override ssl.key.password=${KEY_PASSWORD} \
+              --override ssl.truststore.location=/ca/truststore/server.truststore.jks \
+              --override ssl.truststore.password=${TRUSTSTORE_PASSWORD} \
+              --override ssl.client.auth=requested \
+              --override ssl.enabled.protocols=TLSv1.2,TLSv1.1,TLSv1 \
+              --override ssl.keystore.type=JKS \
+              --override ssl.truststore.type=JKS \
+              --override ssl.endpoint.identification.algorithm= \
+              --override producer.purgatory.purge.interval.requests=1000 \
+              --override replica.fetch.backoff.ms=1000 \
+              --override replica.fetch.max.bytes=10485760 \
+              --override replica.fetch.respons.max.bytes=10485760 \
+              --override fetch.message.max.bytes=10485760 \
+              --override reserved.broker.max.id=1000 "
+          env:
+            - name: KAFKA_HEAP_OPTS
+              value: "-Xmx8G -Xms8G"
+            - name: KAFKA_JVM_PERFORMANCE_OPTS
+              value: " -server -XX:+UseG1GC -XX:MaxGCPauseMillis=100 -XX:InitiatingHeapOccupancyPercent=45 -XX:+ExplicitGCInvokesConcurrent -Djava.awt.headless=true "
+            - name: KAFKA_OPTS
+              value: " -Dlogging.level=INFO -Djava.security.auth.login.config=/opt/kafka/config/kafka_server_jaas.conf"
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: NODE_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
+            - name: KAFKA_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: password-secrets
+                  key: kafka_admin_username
+            - name: KAFKA_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: password-secrets
+                  key: kafka_admin_password
+            - name: TRUSTSTORE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: infra-server-certs
+                  key: truststore_password
+            - name: KEYSTORE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: infra-server-certs
+                  key: keystore_password
+            - name: KEY_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: infra-server-certs
+                  key: key_password
+          readinessProbe:
+            tcpSocket:
+              port: 9092
+            initialDelaySeconds: 5
+            timeoutSeconds: 1
+            periodSeconds: 5
+            failureThreshold: 20
+          livenessProbe:
+            exec:
+              command:
+              - sh
+              - -c
+              - "/usr/java/default/bin/jps  |/bin/grep -q  Kafka"
+            initialDelaySeconds: 5
+            timeoutSeconds: 1
+            periodSeconds: 5
+            failureThreshold: 20
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/opt/kafka/bin/kafka-server-stop.sh"]
+          volumeMounts:
+            - name: localvolume0
+              mountPath: /var/lib/kafka0
+            - name: localvolume1
+              mountPath: /var/lib/kafka1
+            - name: kafka-config
+              subPath: "kafka_server_jaas.conf"
+              mountPath: /kafka_config/kafka_server_jaas.conf
+            - name: kafka-config
+              subPath: "sasl.properties"
+              mountPath: /kafka_config/sasl.properties
+            - name: kafka-config
+              subPath: "run.sh"
+              mountPath: /run.sh
+            - name: kafka-init
+              subPath: "init_component.sh"
+              mountPath: /init_component.sh
+              readOnly: true
+            - name: keystore
+              mountPath: "/ca"
+              readOnly: true
+      volumes:
+        - name: kafka-config
+          configMap:
+            name: kafka-default-config
+            defaultMode: 0755
+        - name: kafka-init
+          configMap:
+            name: kafka-default-init
+            defaultMode: 0755
+        - name: keystore
+          secret:
+            secretName: infra-server-certs
+            items:
+            - key: keystore.jks
+              path: keystore/server.keystore.jks
+            - key: truststore.jks
+              path: truststore/server.truststore.jks
+  volumeClaimTemplates:
+  - metadata:
+      name: localvolume0
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      storageClassName: storageclass-local-kafka
+      resources:
+        requests:
+          storage: 50G
+  - metadata:
+      name: localvolume1
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      storageClassName: storageclass-local-kafka
+      resources:
+        requests:
+          storage: 50G

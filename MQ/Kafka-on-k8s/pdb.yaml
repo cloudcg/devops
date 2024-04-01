@@ -1,0 +1,11 @@
+---
+# Source: kafka/templates/pdb.yaml
+apiVersion: policy/v1beta1
+kind: PodDisruptionBudget
+metadata:
+  name: kafka-default-pdb
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: kafka-default
+  minAvailable: 2

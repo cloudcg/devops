@@ -1,0 +1,91 @@
+---
+# Source: kafka/templates/burrow-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: burrow-default
+  labels:
+    app.kubernetes.io/version: "2.12-2.2.2"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: kafka
+    app.kubernetes.io/instance: burrow-default
+spec:
+  minReadySeconds: 10
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 20%
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: burrow-default
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/instance: burrow-default
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+    spec:
+      nodeSelector:
+        viper.sensetime.com/node-components: "True"
+      
+      imagePullSecrets:
+        - name: inner
+      containers:
+      - name: burrow
+        image: "{ip}:5000/infra/bringg/burrow:v1.3.3-amd64"
+        imagePullPolicy: "IfNotPresent"
+        resources:
+          requests:
+            cpu: 250m
+            memory: 256Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+        ports:
+        - name: api
+          containerPort: 8000
+        command:
+        - sh
+        - -c
+        - "cat /etc/burrow/burrow.toml  |sed -e \"s/KAFKA_USERNAME/$KAFKA_USERNAME/g\" -e \"s/KAFKA_PASSWORD/$KAFKA_PASSWORD/g\" > /burrow.toml;\
+          /usr/local/bin/burrow  -config-dir  / "
+        env:
+        - name: KAFKA_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: password-secrets
+              key: kafka_admin_username
+        - name: KAFKA_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: password-secrets
+              key: kafka_admin_password
+        readinessProbe:
+          httpGet:
+            path: /burrow/admin
+            port: 8000
+        livenessProbe:
+          httpGet:
+            path: /burrow/admin
+            port: 8000
+        volumeMounts:
+        - name: config
+          mountPath: /etc/burrow
+      - name: prom
+        image: "{ip}:5000/infra/solsson/burrow-exporter:api-v3-amd64"
+        ports:
+        - name: prometheus
+          containerPort: 8080
+        env:
+        - name: BURROW_ADDR
+          value: http://localhost:8000
+        - name: METRICS_ADDR
+          value: 0.0.0.0:8080
+        - name: INTERVAL
+          value: "30"
+      volumes:
+      - name: config
+        configMap:
+          name: burrow-default-config

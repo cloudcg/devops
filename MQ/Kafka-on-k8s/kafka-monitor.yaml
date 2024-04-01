@@ -1,0 +1,21 @@
+---
+# Source: kafka/templates/svc-monitor.yaml
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: kafka-default-servicemonitor
+  namespace: monitoring
+  labels:
+    k8s-app: kafka-default
+spec:
+  jobLabel: k8s-app
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: kafka-default
+  namespaceSelector:
+    matchNames:
+    - component
+  endpoints:
+  - port: http-metrics
+    interval: 30s
+    honorLabels: true

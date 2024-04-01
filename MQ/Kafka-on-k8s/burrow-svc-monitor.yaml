@@ -1,0 +1,21 @@
+---
+# Source: kafka/templates/burrow-svc-monitor.yaml
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: burrow-default-servicemonitor
+  namespace: monitoring
+  labels:
+    k8s-app: burrow-default
+spec:
+  jobLabel: k8s-app
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: burrow-default
+  namespaceSelector:
+    matchNames:
+    - component
+  endpoints:
+  - port: prometheus
+    interval: 30s
+    honorLabels: true

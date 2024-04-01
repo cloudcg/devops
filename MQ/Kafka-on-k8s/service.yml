@@ -1,0 +1,22 @@
+---
+# Source: kafka/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: kafka-default
+  labels:
+    app.kubernetes.io/version: "2.12-2.2.2"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: kafka
+    app.kubernetes.io/component: kafka-default
+spec:
+  clusterIP: None
+  ports:
+    - port: 9092
+      name: server
+    - port: 9093
+      name: server-ssl
+    - port: 7071
+      name: http-metrics
+  selector:
+    app.kubernetes.io/component: kafka-default

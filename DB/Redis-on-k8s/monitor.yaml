@@ -1,0 +1,22 @@
+---
+# Source: redis/templates/monitor.yaml
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: redis-default-monitor
+  namespace: monitoring
+  labels:
+    k8s-app: redis-default
+spec:
+  jobLabel: k8s-app
+  endpoints:
+  - port: metrics
+    interval: 30s
+    honorLabels: true
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: redis
+      app.kubernetes.io/instance: redis-default
+  namespaceSelector:
+    matchNames:
+    - component

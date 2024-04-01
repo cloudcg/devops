@@ -1,0 +1,70 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: zookeeper-default-0
+  labels:
+    app.kubernetes.io/name: zookeeper
+    app.kubernetes.io/instance: zookeeper-default
+    app.kubernetes.io/version: "1.0-3.4.13"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  type: ClusterIP
+  ports:
+  - port: 2181
+    name: client
+  - port: 2888
+    name: server
+  - port: 3888
+    name: leader-election
+  selector:
+    app.kubernetes.io/name: zookeeper
+    app.kubernetes.io/instance: zookeeper-default
+    statefulset.kubernetes.io/pod-name: zookeeper-default-0
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: zookeeper-default-1
+  labels:
+    app.kubernetes.io/name: zookeeper
+    app.kubernetes.io/instance: zookeeper-default
+    app.kubernetes.io/version: "1.0-3.4.13"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  type: ClusterIP
+  ports:
+  - port: 2181
+    name: client
+  - port: 2888
+    name: server
+  - port: 3888
+    name: leader-election
+  selector:
+    app.kubernetes.io/name: zookeeper
+    app.kubernetes.io/instance: zookeeper-default
+    statefulset.kubernetes.io/pod-name: zookeeper-default-1
+---
+# Source: zookeeper/templates/client_service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: zookeeper-default-2
+  labels:
+    app.kubernetes.io/name: zookeeper
+    app.kubernetes.io/instance: zookeeper-default
+    app.kubernetes.io/version: "1.0-3.4.13"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  type: ClusterIP
+  ports:
+  - port: 2181
+    name: client
+  - port: 2888
+    name: server
+  - port: 3888
+    name: leader-election
+  selector:
+    app.kubernetes.io/name: zookeeper
+    app.kubernetes.io/instance: zookeeper-default
+    statefulset.kubernetes.io/pod-name: zookeeper-default-2

@@ -1,0 +1,72 @@
+---
+# Source: kafka/templates/init-script.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kafka-default-init
+data:
+  init_component.sh: |
+    #!/bin/bash
+
+    set -x
+
+    zookeeper_address=${ZOOKEEPER_ADDRESS:-zookeeper-default:2181}
+    topics=(  stream.filtered_objects.pedestrian  oplog.vps.task_config oplog.rtc.cs.documents.clean message.rtc.documents oplog.rtc.rt_worker.documents oplog.rtc.offline_cluster  )
+    topic_retentions='[]'
+
+    zk_status_ready() {
+        for ((i=0; i<60; i++));
+        do
+            kafka-topics.sh --list --zookeeper $zookeeper_address/kafka
+
+            if [[ $? -ne 0 ]];then
+                    echo "Kafka not ready"
+                    sleep 5
+                    continue
+            else
+                break
+            fi
+        done
+    }
+
+    create_topic_if_not_exist() {
+        topic=$1
+        kafka-topics.sh --create \
+            --zookeeper $zookeeper_address/kafka \
+            --topic $topic \
+            --replication-factor 2 \
+            --partitions 32 \
+            --config retention.ms=604800000 \
+            --config retention.bytes=10737418240 \
+            --if-not-exists
+    }
+
+    create_topics() {
+        for topic in ${topics[@]};do
+          echo "Create topic " $topic
+          create_topic_if_not_exist $topic
+        done
+    }
+
+    override_topic_retentions() {
+        topic_retentions_len=$( echo "$topic_retentions" | jq -r ". | length" )
+
+        for i in $(seq 1 $topic_retentions_len); do
+            index=$(( i - 1 ))
+            topic_name=`echo "$topic_retentions" | jq -r ".[$index].topic_name"`
+            retention_hours=`echo "$topic_retentions" | jq -r ".[$index].retention_hours"`
+            retention_bytes=`echo "$topic_retentions" | jq -r ".[$index].retention_bytes"`
+
+            create_topic_if_not_exist $topic_name
+
+            kafka-topics.sh --alter \
+                --zookeeper $zookeeper_address/kafka \
+                --topic $topic \
+                --config retention.ms=$(( $retention_hours * 3600 * 1000 )) \
+                --config retention.bytes=$retention_bytes
+        done
+    }
+
+    zk_status_ready
+    create_topics
+    override_topic_retentions

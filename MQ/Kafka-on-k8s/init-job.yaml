@@ -1,0 +1,83 @@
+---
+# Source: kafka/templates/init-job.yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: kafka-default-initializer
+  labels:
+    app.kubernetes.io/version: "2.12-2.2.2"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: kafka
+spec:
+  ttlSecondsAfterFinished: 3600
+  backoffLimit: 10
+  template:
+    metadata:
+      name: kafka-default-initializer
+      labels:
+        app.kubernetes.io/version: "2.12-2.2.2"
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: kafka
+    spec:
+      restartPolicy: Never
+      
+      imagePullSecrets:
+        - name: inner
+      initContainers:
+      - name: wait
+        image: "{ip}:5000/viper-ce/library/busybox:1.33.0-amd64"
+        imagePullPolicy: "IfNotPresent"
+        command:
+        - sh
+        - -c
+        - |
+          trap exit TERM
+          pods="kafka-default-0.kafka-default kafka-default-1.kafka-default kafka-default-2.kafka-default"
+          port=9092
+          for host in ${pods}; do
+            while true; do
+              nc -vz -w 3 $host $port
+              if [ $? -eq 0 ]; then
+                break
+              else
+                echo "info: failed to connect to $host:$port, sleep 1 second then retry"
+                sleep 1
+              fi
+            done
+          done
+          echo "info: successfully connected to all kafka pods, able to initialize Kafka now"
+      containers:
+      - name: init
+        image: "{ip}:5000/infra/kafka-2.12-2.2.2:975c28c-amd64"
+        imagePullPolicy: "IfNotPresent"
+        command: ["/bin/sh","-ec","/init_component.sh"]
+        env:
+        - name: KAFKA_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: password-secrets
+              key: kafka_admin_username
+        - name: KAFKA_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: password-secrets
+              key: kafka_admin_password
+        - name: ZOOKEEPER_ADDRESS
+          value: "zookeeper-default.component:2181"
+        volumeMounts:
+        - name: kafka-config
+          subPath: "sasl.properties"
+          mountPath: /kafka_config/sasl.properties
+        - name: kafka-init
+          subPath: "init_component.sh"
+          mountPath: /init_component.sh
+          readOnly: true
+      volumes:
+      - name: kafka-config
+        configMap:
+          name: kafka-default-config
+          defaultMode: 0755
+      - name: kafka-init
+        configMap:
+          name: kafka-default-init
+          defaultMode: 0755

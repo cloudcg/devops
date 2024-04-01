@@ -1,0 +1,127 @@
+---
+# Source: redis/templates/statefulset.yaml
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: redis-default
+  labels:
+    app.kubernetes.io/name: redis
+    app.kubernetes.io/instance: redis-default
+    app.kubernetes.io/version: "6.2.6"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  updateStrategy:
+    rollingUpdate:
+      partition: 0
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: redis
+      app.kubernetes.io/instance: redis-default
+  replicas: 23
+  serviceName: redis-default
+  podManagementPolicy: Parallel
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: redis
+        app.kubernetes.io/instance: redis-default
+        app.kubernetes.io/version: "6.2.6"
+        app.kubernetes.io/managed-by: Helm
+      annotations:
+        {}
+    spec:
+      enableServiceLinks: false
+      imagePullSecrets:
+        - name: inner
+      nodeSelector:
+        viper.sensetime.com/node-engine-stream: "True"
+      securityContext:
+        fsGroup: 0
+        runAsUser: 0
+      containers:
+        - name: redis
+          image: {ip}:5000/infra/redis:6.2.6
+          imagePullPolicy: "IfNotPresent"
+          securityContext:
+            runAsNonRoot: false
+            runAsUser: 0
+          command: [ "/bin/bash", "-ce", "mkdir /var/lib/redis && redis-server /etc/redis/redis.conf --requirepass ${REDIS_PASSWORD} && tail -f /dev/null" ]
+          env:
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: redis-secrets
+                  key: redis_admin_password
+          ports:
+            - name: redis
+              containerPort: 6379
+          livenessProbe:
+            initialDelaySeconds: 15
+            periodSeconds: 5
+            # One second longer than command timeout should prevent generation of zombie processes.
+            timeoutSeconds: 6
+            successThreshold: 1
+            failureThreshold: 5
+            exec:
+              command:
+                - bash
+                - /etc/redis/healthcheck.sh
+          readinessProbe:
+            initialDelaySeconds: 15
+            periodSeconds: 5
+            # One second longer than command timeout should prevent generation of zombie processes.
+            timeoutSeconds: 6
+            successThreshold: 1
+            failureThreshold: 5
+            exec:
+              command:
+                - sh
+                - /etc/redis/healthcheck.sh
+          resources:
+            limits:
+              cpu: 1
+              memory: 9Gi
+            requests:
+              cpu: 1
+              memory: 8Gi
+          volumeMounts:
+            - mountPath: /etc/redis/
+              name: config
+        - name: exporter
+          image: {ip}:5000/infra/redis-exporter:v1.15.1
+          imagePullPolicy: "IfNotPresent"
+          args:
+            - --debug
+            - --redis.addr=redis://127.0.0.1:6379
+            - --redis.password=$(REDIS_PASSWORD)
+          env:
+            - name: REDIS_ADDR
+              value: "redis://127.0.0.1:6379"
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: redis-secrets
+                  key: redis_admin_password
+          ports:
+            - name: http-metrics
+              containerPort: 9121
+          resources:
+            limits:
+              cpu: 100m
+              memory: 128Mi
+            requests:
+              cpu: 100m
+              memory: 128Mi
+      volumes:
+        - name: config
+          configMap:
+            name: redis-default

@@ -1,0 +1,24 @@
+---
+# Source: kafka/templates/config.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kafka-default-config
+data:
+  kafka_server_jaas.conf: |+
+    KafkaServer {
+      org.apache.kafka.common.security.plain.PlainLoginModule required
+      username="USERNAME"
+      password="PASSWORD"
+      user_USERNAME="PASSWORD";
+    };
+  sasl.properties: |+
+    security.protocol=SASL_PLAINTEXT
+    sasl.mechanism=PLAIN
+    sasl.jaas.config=org.apache.kafka.common.security.plain.PlainLoginModule required \
+    username=\"USERNAME\" password=\"PASSWORD\";
+  run.sh: |+
+    set -x
+    sed -e "s/USERNAME/$KAFKA_USERNAME/g;s/PASSWORD/$KAFKA_PASSWORD/g" /kafka_config/kafka_server_jaas.conf >/opt/kafka/config/kafka_server_jaas.conf
+    sed -e "s/USERNAME/$KAFKA_USERNAME/g;s/PASSWORD/$KAFKA_PASSWORD/g" /kafka_config/sasl.properties >/opt/kafka/config/sasl.properties
+    kafka-server-start.sh $@

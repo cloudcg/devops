@@ -1,0 +1,68 @@
+version: '3.3'
+
+services:
+  gitlab:
+    image: gitlab/gitlab-ce:latest
+    container_name: gitlab
+    restart: always
+    hostname: 192.168.2.7
+    ports:
+      - "8081:8081"
+      - "8443:8443"
+      - "2222:2222"
+    depends_on:
+      - postgres
+      - redis
+    environment:
+      GITLAB_OMNIBUS_CONFIG: |
+        external_url 'http://192.168.2.7:8081'
+        gitlab_rails['gitlab_shell_ssh_port'] = 2222
+        gitlab_rails['smtp_enable'] = false
+        gitlab_rails['db_adapter'] = 'postgresql'
+        gitlab_rails['db_encoding'] = 'unicode'
+        gitlab_rails['db_host'] = 'postgres'
+        gitlab_rails['db_port'] = '5432'
+        gitlab_rails['db_database'] = 'gitlabdb'
+        gitlab_rails['db_username'] = 'gitlab'
+        gitlab_rails['db_password'] = 'gitlab123'
+        gitlab_rails['redis_host'] = 'redis'
+        gitlab_rails['redis_port'] = '6379'
+        letsencrypt['enable'] = false
+        nginx['redirect_http_to_https'] = false
+      GITLAB_ROOT_PASSWORD: 'P@ssw0rd!2024'
+    volumes:
+      - ./config:/etc/gitlab
+      - ./data:/var/opt/gitlab
+      - ./logs:/var/log/gitlab
+    networks:
+      - gitlab_net
+
+  postgres:
+    image: postgres:latest
+    container_name: postgres
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: gitlab
+      POSTGRES_PASSWORD: gitlab123
+      POSTGRES_DB: gitlabdb
+    volumes:
+      - ./postgres:/var/lib/postgresql/data
+    networks:
+      - gitlab_net
+
+  redis:
+    image: redis:latest
+    container_name: redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./redis:/data
+    networks:
+      - gitlab_net
+
+networks:
+  gitlab_net:
+    driver: bridge

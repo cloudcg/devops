@@ -1,0 +1,70 @@
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gitlab
+spec:
+  minReadySeconds: 10
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 20%
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gitlab
+  template:
+    metadata:
+      labels:
+        app: gitlab
+    spec:
+      nodeSelector:
+        viper.sensetime.com/node-engine-stream: "True"
+      imagePullSecrets:
+      - name: inner
+      dnsConfig:
+        options:
+          - name: timeout
+            value: "1"
+          - name: attempts
+            value: "1"
+          - name: single-request-reopen
+      containers:
+      - name: gitlab
+        image: "172.20.20.55:5000/viper/gitlab:latest"
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          httpGet:
+            path: /metrics
+            port: 8089
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          failureThreshold: 20
+        readinessProbe:
+          httpGet:
+            path: /metrics
+            port: 8089
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          failureThreshold: 20
+        resources:
+          requests:
+            memory: "6Gi"
+            cpu: "2"
+          limits:
+            cpu: "8.0"
+        env:
+        - name: IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        ports:
+            containerPort: 80
+            containerPort: 22
+        volumeMounts:
+        - name: gitlab-volume
+          mountPath: "/etc/gitlab"
+      volumes:
+      - name: gitlab-volume
+        emptyDir: {}

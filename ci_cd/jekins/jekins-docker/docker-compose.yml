@@ -1,0 +1,21 @@
+version: '3.3'
+
+services:
+  jenkins-master:
+    image: jenkins/jenkins
+    container_name: jenkins-master
+    ports:
+      - "8080:8080"
+      - "50000:50000"
+    environment:
+      - JENKINS_ADMIN_PASSWORD_FILE=/run/secrets/jenkins_admin_password
+    volumes:
+      - ./jenkins_home:/var/jenkins_home  # 挂载 Jenkins 数据目录
+      - ./jenkins_workspace:/var/jenkins_workspace  # 挂载 Jenkins 工作目录
+    secrets:
+      - jenkins_admin_password
+    restart: always
+secrets:
+  jenkins_admin_password:
+    file: ./jenkins_admin_password.txt
+  
